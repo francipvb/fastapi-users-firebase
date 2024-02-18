@@ -21,6 +21,7 @@ deptry = "^0.12.0"
 mypy = "^1.5.1"
 pre-commit = "^3.4.0"
 tox = "^4.11.1"
+ruff = "^0.2.2"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "^1.4.2"
@@ -80,7 +81,7 @@ select = [
   # tryceratops
   "TRY",
   # Documentation-related
-  "D"
+  "D",
 ]
 ignore = [
   # LineTooLong
@@ -91,6 +92,9 @@ ignore = [
 
 [tool.ruff.format]
 preview = true
+
+[tool.ruff.pydocstyle]
+convention = "google"
 
 [tool.coverage.report]
 skip_empty = true
