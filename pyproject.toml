@@ -22,6 +22,8 @@ mypy = "^1.5.1"
 pre-commit = "^3.4.0"
 tox = "^4.11.1"
 ruff = "^0.2.2"
+faker = "^23.2.1"
+trio = "^0.24.0"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "^1.4.2"
@@ -49,6 +51,8 @@ testpaths = ["tests"]
 target-version = "py39"
 line-length = 120
 fix = true
+
+[tool.ruff.lint]
 select = [
   # flake8-2020
   "YTT",
@@ -90,6 +94,9 @@ ignore = [
   # DoNotAssignLambda
   "E731",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D100", "D101", "D102", "S101"]
 
 [tool.ruff.format]
 preview = true
