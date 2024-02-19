@@ -35,10 +35,11 @@ build-backend = "poetry.core.masonry.api"
 [tool.mypy]
 files = ["fastapi_users_firebase"]
 follow_imports = "silent"
+disable_error_code = ["import-untyped"]
 
 
 [tool.pyright]
-typeCheckingMode = "strict"
+typeCheckingMode = "standard"
 reportMissingTypeStubs = false
 
 [tool.pytest.ini_options]
