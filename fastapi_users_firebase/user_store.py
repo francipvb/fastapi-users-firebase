@@ -5,11 +5,11 @@ This module contains the user database store.
 
 from typing import NewType, cast
 
-import firebase_admin  # type: ignore[import-untyped]
+import firebase_admin
 from anyio import to_thread
 from fastapi_users.db.base import BaseUserDatabase
 from fastapi_users.models import UserProtocol
-from firebase_admin import auth  # type: ignore[import-untyped]
+from firebase_admin import auth
 
 UID = NewType("UID", str)
 
@@ -37,7 +37,7 @@ class FirebaseUser(UserProtocol[UID]):
         Returns:
             The UID string
         """
-        return UID(str(self._user.uid))  # type: ignore[]
+        return UID(str(self._user.uid))
 
     @property
     def email(self) -> str:  # type: ignore[override]
@@ -48,7 +48,7 @@ class FirebaseUser(UserProtocol[UID]):
         Returns:
             The user email, or an empty string
         """
-        return self._user.email or ""  # type: ignore[]
+        return self._user.email or ""
 
     @property
     def hashed_password(self) -> str:  # type: ignore[override]
@@ -99,7 +99,7 @@ class FirebaseUser(UserProtocol[UID]):
             A boolean value indicating whether the user was verified or not
         """
         user = self._user
-        return bool(user.email_verified) or bool(user.phone_number)  # type: ignore[]
+        return bool(user.email_verified) or bool(user.phone_number)
 
     @property
     def name(self) -> str | None:
@@ -108,7 +108,7 @@ class FirebaseUser(UserProtocol[UID]):
         Returns:
             The user display name
         """
-        return self._user.display_name  # type: ignore[]
+        return self._user.display_name
 
     @property
     def phone_number(self) -> str | None:
@@ -117,7 +117,7 @@ class FirebaseUser(UserProtocol[UID]):
         Returns:
             The phone number string.
         """
-        return self._user.phone_number  # type: ignore[]
+        return self._user.phone_number
 
 
 class FirebaseUserDatabase(BaseUserDatabase[FirebaseUser, UID]):
@@ -145,7 +145,7 @@ class FirebaseUserDatabase(BaseUserDatabase[FirebaseUser, UID]):
         try:
             user = cast(
                 auth.UserRecord,
-                await to_thread.run_sync(auth.get_user, id, self._app),  # type: ignore[]
+                await to_thread.run_sync(auth.get_user, id, self._app),
             )
         except auth.UserNotFoundError:
             return None
@@ -164,15 +164,15 @@ class FirebaseUserDatabase(BaseUserDatabase[FirebaseUser, UID]):
             An user if the email was found, or `None`.
         """
         try:
-            user: auth.UserRecord = await to_thread.run_sync(  # type: ignore[]
-                auth.get_user_by_email,  # type: ignore[]
+            user = await to_thread.run_sync(
+                auth.get_user_by_email,
                 email,
                 self._app,
             )
         except auth.UserNotFoundError:
             return None
         else:
-            return FirebaseUser(user, self._app)  # type: ignore[]
+            return FirebaseUser(user, self._app)
 
     async def delete(self, user: FirebaseUser) -> None:
         """Delete an user from the database.
@@ -184,4 +184,4 @@ class FirebaseUserDatabase(BaseUserDatabase[FirebaseUser, UID]):
             ValueError: Raised if the user ID is not valid
             FirebaseError: Raised by Firebase Auth if something occurs.
         """
-        await to_thread.run_sync(auth.delete_user, user.id)  # type: ignore[]
+        await to_thread.run_sync(auth.delete_user, user.id)
