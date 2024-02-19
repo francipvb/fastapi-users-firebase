@@ -173,3 +173,15 @@ class FirebaseUserDatabase(BaseUserDatabase[FirebaseUser, UID]):
             return None
         else:
             return FirebaseUser(user, self._app)  # type: ignore[]
+
+    async def delete(self, user: FirebaseUser) -> None:
+        """Delete an user from the database.
+
+        Args:
+            user: the user to be deleted
+
+        Raises:
+            ValueError: Raised if the user ID is not valid
+            FirebaseError: Raised by Firebase Auth if something occurs.
+        """
+        await to_thread.run_sync(auth.delete_user, user.id)  # type: ignore[]
