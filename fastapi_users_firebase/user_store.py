@@ -3,7 +3,7 @@
 This module contains the user database store.
 """
 
-from typing import NewType, cast
+from typing import NewType, Optional, cast
 
 import firebase_admin
 from anyio import to_thread
@@ -17,7 +17,7 @@ UID = NewType("UID", str)
 class FirebaseUser(UserProtocol[UID]):
     """A firebase user instance."""
 
-    def __init__(self, user: auth.UserRecord, app: firebase_admin.App | None = None) -> None:
+    def __init__(self, user: auth.UserRecord, app: Optional[firebase_admin.App] = None) -> None:
         """Initialyze the user object.
 
         The user must be a firebase user record object to be successfully wrapped.
@@ -51,7 +51,7 @@ class FirebaseUser(UserProtocol[UID]):
         return self._user.email or ""
 
     @property
-    def hashed_password(self) -> str:  # type: ignore[override]
+    def hashed_password(self) -> str:  # type: ignore[override] # pragma: nocover
         """Retrieve an empty string.
 
         As we don't have the hability to pull the password hash, we have to retrieve an empty string.
@@ -62,7 +62,7 @@ class FirebaseUser(UserProtocol[UID]):
         return ""
 
     @property
-    def is_active(self) -> bool:  # type: ignore[override]
+    def is_active(self) -> bool:  # type: ignore[override] # pragma: nocover
         """Indicate whether the user is active.
 
         An user is active if it is not disabled in the firebase service.
@@ -73,7 +73,7 @@ class FirebaseUser(UserProtocol[UID]):
         return not self._user.disabled
 
     @property
-    def is_superuser(self) -> bool:  # type: ignore[override]
+    def is_superuser(self) -> bool:  # type: ignore[override] # pragma: nocover
         """Return whether the user is a superuser.
 
         As of now, we don't have a way to detect whether the user is a superuser or not.
@@ -102,7 +102,7 @@ class FirebaseUser(UserProtocol[UID]):
         return bool(user.email_verified) or bool(user.phone_number)
 
     @property
-    def name(self) -> str | None:
+    def name(self) -> Optional[str]:  # pragma: nocover
         """Get the user display name.
 
         Returns:
@@ -111,7 +111,7 @@ class FirebaseUser(UserProtocol[UID]):
         return self._user.display_name
 
     @property
-    def phone_number(self) -> str | None:
+    def phone_number(self) -> Optional[str]:  # pragma: nocover
         """Retrieve the user phone number.
 
         Returns:
@@ -123,7 +123,7 @@ class FirebaseUser(UserProtocol[UID]):
 class FirebaseUserDatabase(BaseUserDatabase[FirebaseUser, UID]):
     """A database of firebase users."""
 
-    def __init__(self, firebase_app: firebase_admin.App | None = None) -> None:
+    def __init__(self, firebase_app: Optional[firebase_admin.App] = None) -> None:
         """Initialyze the firebase user store.
 
         Args:
@@ -133,7 +133,7 @@ class FirebaseUserDatabase(BaseUserDatabase[FirebaseUser, UID]):
         super().__init__()
         self._app = firebase_app
 
-    async def get(self, id: UID) -> FirebaseUser | None:  # noqa: A002
+    async def get(self, id: UID) -> Optional[FirebaseUser]:  # noqa: A002
         """Retrieve an user from firebase.
 
         Args:
@@ -152,7 +152,7 @@ class FirebaseUserDatabase(BaseUserDatabase[FirebaseUser, UID]):
         else:
             return FirebaseUser(user, self._app)
 
-    async def get_by_email(self, email: str) -> FirebaseUser | None:
+    async def get_by_email(self, email: str) -> Optional[FirebaseUser]:
         """Get an user by email.
 
         This method just calls the firebase authentication service to retrieve an user by it's email and wraps it in a specialyzed object.
@@ -184,4 +184,11 @@ class FirebaseUserDatabase(BaseUserDatabase[FirebaseUser, UID]):
             ValueError: Raised if the user ID is not valid
             FirebaseError: Raised by Firebase Auth if something occurs.
         """
+        if not isinstance(user, FirebaseUser):
+            error_msg = f"Object {user!r} is not a valid user object."
+            raise TypeError(error_msg)
+        if self._app != user._app:
+            error_msg = "Provided object does not belong to the same app."
+            raise AssertionError(error_msg)
+
         await to_thread.run_sync(auth.delete_user, user.id)
