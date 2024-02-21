@@ -5,14 +5,14 @@ This module contains the user database store.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, NewType, Optional, cast
+from typing import Any, Callable, Dict, NewType, Optional, Union, cast
 
 import firebase_admin
 from anyio import to_thread
 from fastapi_users.db.base import BaseUserDatabase
 from fastapi_users.models import UserProtocol
 from firebase_admin import auth
-from pydantic import BaseModel, EmailStr, HttpUrl, SecretStr, model_validator
+from pydantic import BaseModel, EmailStr, HttpUrl, Json, SecretStr, model_validator
 from pydantic_extra_types.phone_numbers import PhoneNumber
 from typing_extensions import Self
 
@@ -222,11 +222,29 @@ class FirebaseUserDatabase(BaseUserDatabase[FirebaseUser, UID]):
         Returns:
             A new `FirebaseUser` object
         """
-        data = _CreateUpdateFirebaseUserModel.model_validate(create_dict)
+        data = _CreateFirebaseUserModel.model_validate(create_dict)
         return self._map_user(await to_thread.run_sync(self._create, data))
 
     def _create(self, data: _CreateUpdateFirebaseUserModel) -> auth.UserRecord:
         return auth.create_user(app=self._app, **data.model_dump(mode="json", exclude_unset=True))
+
+    async def update(self, user: FirebaseUser, update_dict: Dict[str, Any]) -> FirebaseUser:
+        """Perform an user update.
+
+        The user is updated by calling firebase services with a dict containing the new user data.
+
+        Args:
+            user: the user being updated
+            update_dict: the dictionary with the user data
+
+        Returns:
+            The updated user object.
+        """
+        data = _UpdateFirebaseUserModel.model_validate(update_dict)
+        return self._map_user(await to_thread.run_sync(self._update, str(user.id), data))
+
+    def _update(self, uid: str, data: _CreateUpdateFirebaseUserModel) -> auth.UserRecord:
+        return auth.update_user(uid=uid, app=self._app, **data.model_dump(mode="json", exclude_unset=True))
 
 
 class _CreateUpdateFirebaseUserModel(BaseModel):
@@ -238,9 +256,15 @@ class _CreateUpdateFirebaseUserModel(BaseModel):
     password: Optional[SecretStr] = None
     disabled: bool = False
 
+
+class _CreateFirebaseUserModel(_CreateUpdateFirebaseUserModel):
     @model_validator(mode="after")
     def _check_data(self) -> Self:
         if self.email is None and self.phone_number is None:  # pragma: nocover
             error_msg = "Either email or phone number must be set."
             raise ValueError(error_msg)
         return self
+
+
+class _UpdateFirebaseUserModel(_CreateUpdateFirebaseUserModel):
+    custom_claims: Union[Json, Dict[str, Any], None] = None
