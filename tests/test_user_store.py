@@ -122,8 +122,12 @@ class TestFirebaseUser:
         return create_autospec(auth.UserRecord)
 
     @pytest.fixture()
-    def user(self, user_spec: Mock) -> FirebaseUser:
-        return FirebaseUser(user_spec)
+    def is_superuser_mock(self) -> Mock:
+        return Mock()
+
+    @pytest.fixture()
+    def user(self, user_spec: Mock, is_superuser_mock: Mock, firebase_app: firebase_admin.App) -> FirebaseUser:
+        return FirebaseUser(user_spec, firebase_app, is_superuser_mock)
 
     def test_id(self, user: FirebaseUser, user_spec: Mock, faker: Faker) -> None:
         user_spec.uid = faker.pystr()
@@ -141,3 +145,7 @@ class TestFirebaseUser:
         user_spec.phone_number = faker.phone_number()
         user_spec.email_verified = False
         assert user.is_verified
+
+    def test_is_superuser(self, user: FirebaseUser, is_superuser_mock: Mock, user_spec: Mock) -> None:
+        assert user.is_superuser is is_superuser_mock.return_value
+        is_superuser_mock.assert_called_with(user_spec)

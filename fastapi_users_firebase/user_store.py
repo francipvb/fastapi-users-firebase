@@ -3,7 +3,7 @@
 This module contains the user database store.
 """
 
-from typing import NewType, Optional, cast
+from typing import Callable, NewType, Optional, cast
 
 import firebase_admin
 from anyio import to_thread
@@ -13,11 +13,18 @@ from firebase_admin import auth
 
 UID = NewType("UID", str)
 
+IsSuperuser = Callable[[auth.UserRecord], bool]
+
 
 class FirebaseUser(UserProtocol[UID]):
     """A firebase user instance."""
 
-    def __init__(self, user: auth.UserRecord, app: Optional[firebase_admin.App] = None) -> None:
+    def __init__(
+        self,
+        user: auth.UserRecord,
+        app: Optional[firebase_admin.App] = None,
+        is_superuser_func: Optional[IsSuperuser] = None,
+    ) -> None:
         """Initialyze the user object.
 
         The user must be a firebase user record object to be successfully wrapped.
@@ -25,10 +32,12 @@ class FirebaseUser(UserProtocol[UID]):
         Args:
             user: A firebase user object
             app: a firebase app, if any. Defaults to None.
+            is_superuser_func: A function to determine whether the user is a superuser. Defaults to None.
         """
         super().__init__()
         self._user = user
         self._app = app
+        self._is_superuser: IsSuperuser = is_superuser_func or (lambda _: False)  # pragma: nocover
 
     @property
     def id(self) -> UID:  # type: ignore[override]
@@ -73,7 +82,7 @@ class FirebaseUser(UserProtocol[UID]):
         return not self._user.disabled
 
     @property
-    def is_superuser(self) -> bool:  # type: ignore[override] # pragma: nocover
+    def is_superuser(self) -> bool:  # type: ignore[override]
         """Return whether the user is a superuser.
 
         As of now, we don't have a way to detect whether the user is a superuser or not.
@@ -83,7 +92,7 @@ class FirebaseUser(UserProtocol[UID]):
         Returns:
             A boolean value to indicate whether the user is a superuser or not
         """
-        return False
+        return self._is_superuser(self._user)
 
     @property
     def is_verified(self) -> bool:  # type: ignore[override]
@@ -123,15 +132,18 @@ class FirebaseUser(UserProtocol[UID]):
 class FirebaseUserDatabase(BaseUserDatabase[FirebaseUser, UID]):
     """A database of firebase users."""
 
-    def __init__(self, firebase_app: Optional[firebase_admin.App] = None) -> None:
+    def __init__(
+        self, firebase_app: Optional[firebase_admin.App] = None, is_superuser_func: Optional[IsSuperuser] = None
+    ) -> None:
         """Initialyze the firebase user store.
 
         Args:
             firebase_app (optional): The firebase app object. Defaults to None.
-
+            is_superuser_func: A function to determine whether the user is a superuser. Defaults to None.
         """
         super().__init__()
         self._app = firebase_app
+        self._is_superuser = is_superuser_func
 
     async def get(self, id: UID) -> Optional[FirebaseUser]:  # noqa: A002
         """Retrieve an user from firebase.
@@ -150,7 +162,10 @@ class FirebaseUserDatabase(BaseUserDatabase[FirebaseUser, UID]):
         except auth.UserNotFoundError:
             return None
         else:
-            return FirebaseUser(user, self._app)
+            return self._map_user(user)
+
+    def _map_user(self, user):
+        return FirebaseUser(user, self._app, self._is_superuser)
 
     async def get_by_email(self, email: str) -> Optional[FirebaseUser]:
         """Get an user by email.
@@ -172,7 +187,7 @@ class FirebaseUserDatabase(BaseUserDatabase[FirebaseUser, UID]):
         except auth.UserNotFoundError:
             return None
         else:
-            return FirebaseUser(user, self._app)
+            return self._map_user(user)
 
     async def delete(self, user: FirebaseUser) -> None:
         """Delete an user from the database.
