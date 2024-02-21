@@ -37,6 +37,47 @@ def database(firebase_app: firebase_admin.App):
     return FirebaseUserDatabase(firebase_app)
 
 
+@pytest.fixture
+def user_spec() -> Mock:
+    """Build a compatible user record object.
+
+    The user record is a firebase construct that owns all user-related information.
+
+    Returns:
+        A mocked user record object
+    """
+    return create_autospec(auth.UserRecord)
+
+
+@pytest.fixture()
+def is_superuser_mock() -> Mock:
+    """Build a mock for `is_superuser` property.
+
+    The `FirebaseUser.is_superuser` property is backed by a callable. The callable accepts an user record object to check whether the user is a superuser or not.
+
+    Returns:
+        A callable mock object.
+    """
+    return Mock()
+
+
+@pytest.fixture()
+def user(user_spec: Mock, is_superuser_mock: Mock, firebase_app: firebase_admin.App) -> FirebaseUser:
+    """Build an object instance.
+
+    An user instance has an user record coming from firebase authentication.
+
+    Args:
+        user_spec: The user object from firebase
+        is_superuser_mock: A callable that indicates if the user is a superuser
+        firebase_app: The associated firebase application
+
+    Returns:
+        The user object
+    """
+    return FirebaseUser(user_spec, firebase_app, is_superuser_mock)
+
+
 class TestFirebaseUserDatabase:
     @pytest.fixture()
     def get_user_mock(self, monkeypatch: pytest.MonkeyPatch):
@@ -74,6 +115,12 @@ class TestFirebaseUserDatabase:
     def create_mock(self, monkeypatch: pytest.MonkeyPatch) -> Mock:
         mock = Mock()
         monkeypatch.setattr(auth, auth.create_user.__name__, mock)
+        return mock
+
+    @pytest.fixture()
+    def update_mock(self, monkeypatch: pytest.MonkeyPatch) -> Mock:
+        mock = Mock()
+        monkeypatch.setattr(auth, auth.update_user.__name__, mock)
         return mock
 
     @pytest.mark.anyio()
@@ -152,20 +199,24 @@ class TestFirebaseUserDatabase:
         assert result._user == create_mock.return_value
         create_mock.assert_called_with(app=firebase_app, **create_dict)
 
+    @pytest.mark.anyio()
+    async def test_update(
+        self,
+        database: FirebaseUserDatabase,
+        user: FirebaseUser,
+        user_spec: Mock,
+        create_update_model: CreateUpdateModel,
+        firebase_app: firebase_admin.App,
+        update_mock,
+    ):
+        update_mock.return_value = create_autospec(auth.UserRecord)
+        update_dict = create_update_model.model_dump(exclude_unset=True, mode="json")
+        result = await database.update(user, update_dict)
+        assert result._user == update_mock.return_value
+        update_mock.assert_called_with(uid=str(user.id), app=firebase_app, **update_dict)
+
 
 class TestFirebaseUser:
-    @pytest.fixture
-    def user_spec(self) -> Mock:
-        return create_autospec(auth.UserRecord)
-
-    @pytest.fixture()
-    def is_superuser_mock(self) -> Mock:
-        return Mock()
-
-    @pytest.fixture()
-    def user(self, user_spec: Mock, is_superuser_mock: Mock, firebase_app: firebase_admin.App) -> FirebaseUser:
-        return FirebaseUser(user_spec, firebase_app, is_superuser_mock)
-
     def test_id(self, user: FirebaseUser, user_spec: Mock, faker: Faker) -> None:
         user_spec.uid = faker.pystr()
         assert user.id == user_spec.uid
