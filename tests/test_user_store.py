@@ -1,12 +1,15 @@
+from typing import Any, cast
 from unittest.mock import Mock, create_autospec, sentinel
 
 import firebase_admin
+import phone_gen
 import pytest
 from faker import Faker
 from firebase_admin import auth
 
 from fastapi_users_firebase import FirebaseUserDatabase
 from fastapi_users_firebase.user_store import FirebaseUser
+from fastapi_users_firebase.user_store import _CreateUpdateFirebaseUserModel as CreateUpdateModel
 
 
 @pytest.fixture()
@@ -51,6 +54,26 @@ class TestFirebaseUserDatabase:
     def delete_user_mock(self, monkeypatch: pytest.MonkeyPatch) -> Mock:
         mock = Mock()
         monkeypatch.setattr(auth, auth.delete_user.__name__, mock)
+        return mock
+
+    @pytest.fixture()
+    def create_update_model(self, faker: Faker) -> CreateUpdateModel:
+        return CreateUpdateModel(
+            disabled=faker.boolean(),
+            email=faker.email(),
+            display_name=faker.name(),
+            email_verified=faker.boolean(),
+            photo_url=faker.image_url(),
+            phone_number=cast(
+                Any,
+                phone_gen.PhoneNumber("US").get_number(),
+            ),
+        )
+
+    @pytest.fixture()
+    def create_mock(self, monkeypatch: pytest.MonkeyPatch) -> Mock:
+        mock = Mock()
+        monkeypatch.setattr(auth, auth.create_user.__name__, mock)
         return mock
 
     @pytest.mark.anyio()
@@ -107,13 +130,27 @@ class TestFirebaseUserDatabase:
         delete_user_mock.assert_not_called()
 
     @pytest.mark.anyio()
-    async def testdelete(
+    async def test_delete(
         self, database: FirebaseUserDatabase, delete_user_mock: Mock, firebase_app: firebase_admin.App
     ) -> None:
         record = create_autospec(auth.UserRecord)
         user = FirebaseUser(record, firebase_app)
         await database.delete(user)
         delete_user_mock.assert_called_once_with(user.id)
+
+    @pytest.mark.anyio()
+    async def test_create(
+        self,
+        create_mock: Mock,
+        create_update_model: CreateUpdateModel,
+        database: FirebaseUserDatabase,
+        firebase_app: firebase_admin.App,
+    ) -> None:
+        create_mock.return_value = create_autospec(auth.UserRecord)
+        create_dict = create_update_model.model_dump(exclude_unset=True, mode="json")
+        result = await database.create(create_dict)
+        assert result._user == create_mock.return_value
+        create_mock.assert_called_with(app=firebase_app, **create_dict)
 
 
 class TestFirebaseUser:

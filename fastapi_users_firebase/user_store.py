@@ -3,13 +3,18 @@
 This module contains the user database store.
 """
 
-from typing import Callable, NewType, Optional, cast
+from __future__ import annotations
+
+from typing import Any, Callable, Dict, NewType, Optional, cast
 
 import firebase_admin
 from anyio import to_thread
 from fastapi_users.db.base import BaseUserDatabase
 from fastapi_users.models import UserProtocol
 from firebase_admin import auth
+from pydantic import BaseModel, EmailStr, HttpUrl, SecretStr, model_validator
+from pydantic_extra_types.phone_numbers import PhoneNumber
+from typing_extensions import Self
 
 UID = NewType("UID", str)
 
@@ -164,7 +169,7 @@ class FirebaseUserDatabase(BaseUserDatabase[FirebaseUser, UID]):
         else:
             return self._map_user(user)
 
-    def _map_user(self, user):
+    def _map_user(self, user: auth.UserRecord):
         return FirebaseUser(user, self._app, self._is_superuser)
 
     async def get_by_email(self, email: str) -> Optional[FirebaseUser]:
@@ -207,3 +212,35 @@ class FirebaseUserDatabase(BaseUserDatabase[FirebaseUser, UID]):
             raise AssertionError(error_msg)
 
         await to_thread.run_sync(auth.delete_user, user.id)
+
+    async def create(self, create_dict: Dict[str, Any]) -> FirebaseUser:
+        """Create a new user.
+
+        Args:
+            create_dict: a dict containing data for the new user
+
+        Returns:
+            A new `FirebaseUser` object
+        """
+        data = _CreateUpdateFirebaseUserModel.model_validate(create_dict)
+        return self._map_user(await to_thread.run_sync(self._create, data))
+
+    def _create(self, data: _CreateUpdateFirebaseUserModel) -> auth.UserRecord:
+        return auth.create_user(app=self._app, **data.model_dump(mode="json", exclude_unset=True))
+
+
+class _CreateUpdateFirebaseUserModel(BaseModel):
+    display_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    email_verified: bool = False
+    phone_number: Optional[PhoneNumber] = None
+    photo_url: Optional[HttpUrl] = None
+    password: Optional[SecretStr] = None
+    disabled: bool = False
+
+    @model_validator(mode="after")
+    def _check_data(self) -> Self:
+        if self.email is None and self.phone_number is None:  # pragma: nocover
+            error_msg = "Either email or phone number must be set."
+            raise ValueError(error_msg)
+        return self
