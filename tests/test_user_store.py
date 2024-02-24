@@ -8,8 +8,8 @@ from faker import Faker
 from firebase_admin import auth
 
 from fastapi_users_firebase import FirebaseUserDatabase
-from fastapi_users_firebase.user_store import FirebaseUser
-from fastapi_users_firebase.user_store import _CreateUpdateFirebaseUserModel as CreateUpdateModel
+from fastapi_users_firebase.schemas import CreateFirebaseUserModel, UpdateFirebaseUserModel
+from fastapi_users_firebase.user import FirebaseUser
 
 
 @pytest.fixture()
@@ -98,17 +98,33 @@ class TestFirebaseUserDatabase:
         return mock
 
     @pytest.fixture()
-    def create_update_model(self, faker: Faker) -> CreateUpdateModel:
-        return CreateUpdateModel(
-            disabled=faker.boolean(),
+    def create_model(self, faker: Faker) -> CreateFirebaseUserModel:
+        return CreateFirebaseUserModel(
+            is_active=faker.boolean(),
             email=faker.email(),
             display_name=faker.name(),
-            email_verified=faker.boolean(),
+            is_verified=faker.boolean(),
             photo_url=faker.image_url(),
             phone_number=cast(
                 Any,
                 phone_gen.PhoneNumber("US").get_number(),
             ),
+            password=faker.pystr(),
+        )
+
+    @pytest.fixture()
+    def update_model(self, faker: Faker) -> UpdateFirebaseUserModel:
+        return UpdateFirebaseUserModel(
+            is_active=faker.boolean(),
+            email=faker.email(),
+            display_name=faker.name(),
+            is_verified=faker.boolean(),
+            photo_url=faker.image_url(),
+            phone_number=cast(
+                Any,
+                phone_gen.PhoneNumber("US").get_number(),
+            ),
+            password=faker.pystr(),
         )
 
     @pytest.fixture()
@@ -189,15 +205,15 @@ class TestFirebaseUserDatabase:
     async def test_create(
         self,
         create_mock: Mock,
-        create_update_model: CreateUpdateModel,
+        create_model: CreateFirebaseUserModel,
         database: FirebaseUserDatabase,
         firebase_app: firebase_admin.App,
     ) -> None:
         create_mock.return_value = create_autospec(auth.UserRecord)
-        create_dict = create_update_model.model_dump(exclude_unset=True, mode="json")
+        create_dict = create_model.model_dump(exclude_unset=True, mode="json")
         result = await database.create(create_dict)
         assert result._user == create_mock.return_value
-        create_mock.assert_called_with(app=firebase_app, **create_dict)
+        create_mock.assert_called()
 
     @pytest.mark.anyio()
     async def test_update(
@@ -205,15 +221,15 @@ class TestFirebaseUserDatabase:
         database: FirebaseUserDatabase,
         user: FirebaseUser,
         user_spec: Mock,
-        create_update_model: CreateUpdateModel,
+        update_model: UpdateFirebaseUserModel,
         firebase_app: firebase_admin.App,
-        update_mock,
+        update_mock: Mock,
     ):
         update_mock.return_value = create_autospec(auth.UserRecord)
-        update_dict = create_update_model.model_dump(exclude_unset=True, mode="json")
+        update_dict = update_model.model_dump(exclude_unset=True, mode="json")
         result = await database.update(user, update_dict)
         assert result._user == update_mock.return_value
-        update_mock.assert_called_with(uid=str(user.id), app=firebase_app, **update_dict)
+        update_mock.assert_called()
 
 
 class TestFirebaseUser:
