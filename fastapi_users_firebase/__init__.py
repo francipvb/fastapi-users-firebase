@@ -3,6 +3,7 @@
 This is the entrypoint of a plugin to interact with Firebase Authentication from FastAPI users plugin.
 """
 
+from .id_token import FirebaseIdTokenStrategy
 from .manager import FirebaseUserManager
 from .schemas import CreateFirebaseUserModel, CreateUpdateFirebaseUserModel, UpdateFirebaseUserModel
 from .user import FirebaseUser
@@ -15,4 +16,5 @@ __all__ = [
     "CreateUpdateFirebaseUserModel",
     "UpdateFirebaseUserModel",
     "FirebaseUserManager",
+    "FirebaseIdTokenStrategy",
 ]
