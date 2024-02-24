@@ -3,6 +3,6 @@
 This is the entrypoint of a plugin to interact with Firebase Authentication from FastAPI users plugin.
 """
 
-from .user_store import FirebaseUser, FirebaseUserDatabase
+from .user_database import FirebaseUserDatabase
 
-__all__ = ["FirebaseUser", "FirebaseUserDatabase"]
+__all__ = ["user", "FirebaseUserDatabase"]
