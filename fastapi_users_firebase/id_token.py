@@ -39,13 +39,15 @@ class FirebaseIdTokenStrategy(Strategy[FirebaseUser, UID]):
             return None
         try:
             data = await to_thread.run_sync(auth.verify_id_token, token, self._app, True)
-        except (auth.InvalidIdTokenError, auth.RevokedIdTokenError, auth.ExpiredIdTokenError):
+        except (auth.RevokedIdTokenError, auth.ExpiredIdTokenError) as exc:
+            raise HTTPException(HTTPStatus.FORBIDDEN, str(exc)) from exc
+        except auth.InvalidIdTokenError:
             return None
 
         return await user_manager.get(user_manager.parse_id(data["uid"]))
 
-    async def write_token(self, user: FirebaseUser) -> str:  # noqa: D102
-        return await to_thread.run_sync(auth.create_custom_token, str(user.id), self._developer_claims, self._app)
+    async def write_token(self, user: FirebaseUser) -> str:  # noqa: D102 # pragma: nocover
+        raise NotImplementedError()
 
-    async def destroy_token(self, token: str, user: FirebaseUser) -> None:  # noqa: D102
-        raise HTTPException(HTTPStatus.FORBIDDEN, "Client SDK is required.")
+    async def destroy_token(self, token: str, user: FirebaseUser) -> None:  # noqa: D102 # pragma: nocover
+        raise NotImplementedError()
