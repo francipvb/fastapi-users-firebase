@@ -54,8 +54,8 @@ class FirebaseUserDatabase(BaseUserDatabase[FirebaseUser, UID]):
         else:
             return self._map_user(user)
 
-    def _map_user(self, user: auth.UserRecord):
-        return FirebaseUser(user, self._app, self._is_superuser)
+    def _map_user(self, user: auth.UserRecord) -> FirebaseUser:
+        return FirebaseUser.from_record(user, self._is_superuser)
 
     async def get_by_email(self, email: str) -> Optional[FirebaseUser]:
         """Get an user by email.
@@ -92,9 +92,6 @@ class FirebaseUserDatabase(BaseUserDatabase[FirebaseUser, UID]):
         if not isinstance(user, FirebaseUser):
             error_msg = f"Object {user!r} is not a valid user object."
             raise TypeError(error_msg)
-        if self._app != user._app:
-            error_msg = "Provided object does not belong to the same app."
-            raise AssertionError(error_msg)
 
         await to_thread.run_sync(auth.delete_user, user.id)
 
