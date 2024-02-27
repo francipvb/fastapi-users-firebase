@@ -2,14 +2,14 @@ from typing import Any, cast
 from unittest.mock import Mock, create_autospec, sentinel
 
 import firebase_admin
-import phone_gen
 import pytest
 from faker import Faker
 from firebase_admin import auth
+from phone_gen import PhoneNumber
 
 from fastapi_users_firebase import FirebaseUserDatabase
 from fastapi_users_firebase.schemas import CreateFirebaseUserModel, UpdateFirebaseUserModel
-from fastapi_users_firebase.user import FirebaseUser
+from fastapi_users_firebase.user import UID, FirebaseUser
 
 
 @pytest.fixture()
@@ -62,20 +62,30 @@ def is_superuser_mock() -> Mock:
 
 
 @pytest.fixture()
-def user(user_spec: Mock, is_superuser_mock: Mock, firebase_app: firebase_admin.App) -> FirebaseUser:
+def user(faker: Faker, user_spec: Mock, phone_gen: PhoneNumber) -> FirebaseUser:
     """Build an object instance.
 
     An user instance has an user record coming from firebase authentication.
 
     Args:
-        user_spec: The user object from firebase
-        is_superuser_mock: A callable that indicates if the user is a superuser
-        firebase_app: The associated firebase application
+        faker: The faker instance to be used.
+        user_spec: A mock user record object.v
+        phone_gen: A phone number generator.
 
     Returns:
         The user object
     """
-    return FirebaseUser(user_spec, firebase_app, is_superuser_mock)
+    return FirebaseUser(
+        email=faker.email(),
+        hashed_password="",
+        id=UID(faker.pystr()),
+        is_active=faker.boolean(),
+        is_superuser=faker.boolean(),
+        is_verified=faker.boolean(),
+        name=faker.name(),
+        phone_number=phone_gen.get_number(),
+        record=user_spec,
+    )
 
 
 class TestFirebaseUserDatabase:
@@ -98,7 +108,7 @@ class TestFirebaseUserDatabase:
         return mock
 
     @pytest.fixture()
-    def create_model(self, faker: Faker) -> CreateFirebaseUserModel:
+    def create_model(self, faker: Faker, phone_gen: PhoneNumber) -> CreateFirebaseUserModel:
         return CreateFirebaseUserModel(
             is_active=faker.boolean(),
             email=faker.email(),
@@ -107,13 +117,13 @@ class TestFirebaseUserDatabase:
             photo_url=faker.image_url(),
             phone_number=cast(
                 Any,
-                phone_gen.PhoneNumber("US").get_number(),
+                phone_gen.get_number(),
             ),
             password=faker.pystr(),
         )
 
     @pytest.fixture()
-    def update_model(self, faker: Faker) -> UpdateFirebaseUserModel:
+    def update_model(self, faker: Faker, phone_gen: PhoneNumber) -> UpdateFirebaseUserModel:
         return UpdateFirebaseUserModel(
             is_active=faker.boolean(),
             email=faker.email(),
@@ -122,7 +132,7 @@ class TestFirebaseUserDatabase:
             photo_url=faker.image_url(),
             phone_number=cast(
                 Any,
-                phone_gen.PhoneNumber("US").get_number(),
+                phone_gen.get_number(),
             ),
             password=faker.pystr(),
         )
@@ -145,7 +155,7 @@ class TestFirebaseUserDatabase:
         get_user_mock.return_value = sentinel
         result = await database.get(user_id)
         assert result is not None
-        assert result._user is sentinel
+        assert result.record is sentinel
         get_user_mock.assert_called_with(user_id, database._app)
 
     @pytest.mark.anyio()
@@ -156,7 +166,7 @@ class TestFirebaseUserDatabase:
         get_user_by_email_mock.return_value = sentinel
         result = await database.get_by_email(email)
         assert result is not None
-        assert result._user is sentinel
+        assert result.record is sentinel
         get_user_by_email_mock.assert_called_with(email, database._app)
 
     @pytest.mark.anyio()
@@ -185,19 +195,13 @@ class TestFirebaseUserDatabase:
         delete_user_mock.assert_not_called()
 
     @pytest.mark.anyio()
-    async def test_delete_different_apps(self, database: FirebaseUserDatabase, delete_user_mock: Mock) -> None:
-        user = FirebaseUser(create_autospec(auth.UserRecord), create_autospec(firebase_admin.App))
-        with pytest.raises(AssertionError):
-            await database.delete(user)
-
-        delete_user_mock.assert_not_called()
-
-    @pytest.mark.anyio()
     async def test_delete(
-        self, database: FirebaseUserDatabase, delete_user_mock: Mock, firebase_app: firebase_admin.App
+        self,
+        database: FirebaseUserDatabase,
+        delete_user_mock: Mock,
+        firebase_app: firebase_admin.App,
+        user: FirebaseUser,
     ) -> None:
-        record = create_autospec(auth.UserRecord)
-        user = FirebaseUser(record, firebase_app)
         await database.delete(user)
         delete_user_mock.assert_called_once_with(user.id)
 
@@ -212,7 +216,7 @@ class TestFirebaseUserDatabase:
         create_mock.return_value = create_autospec(auth.UserRecord)
         create_dict = create_model.model_dump(exclude_unset=True, mode="json")
         result = await database.create(create_dict)
-        assert result._user == create_mock.return_value
+        assert result.record == create_mock.return_value
         create_mock.assert_called()
 
     @pytest.mark.anyio()
@@ -228,28 +232,5 @@ class TestFirebaseUserDatabase:
         update_mock.return_value = create_autospec(auth.UserRecord)
         update_dict = update_model.model_dump(exclude_unset=True, mode="json")
         result = await database.update(user, update_dict)
-        assert result._user == update_mock.return_value
+        assert result.record == update_mock.return_value
         update_mock.assert_called()
-
-
-class TestFirebaseUser:
-    def test_id(self, user: FirebaseUser, user_spec: Mock, faker: Faker) -> None:
-        user_spec.uid = faker.pystr()
-        assert user.id == user_spec.uid
-
-    def test_email(self, user: FirebaseUser, user_spec: Mock):
-        assert user.email is user_spec.email
-
-    def test_is_verified_with_email(self, user: FirebaseUser, user_spec: Mock) -> None:
-        user_spec.email_verified = True
-        user_spec.phone_number = None
-        assert user.is_verified
-
-    def test_is_verified_with_phone(self, user: FirebaseUser, user_spec: Mock, faker: Faker) -> None:
-        user_spec.phone_number = faker.phone_number()
-        user_spec.email_verified = False
-        assert user.is_verified
-
-    def test_is_superuser(self, user: FirebaseUser, is_superuser_mock: Mock, user_spec: Mock) -> None:
-        assert user.is_superuser is is_superuser_mock.return_value
-        is_superuser_mock.assert_called_with(user_spec)
