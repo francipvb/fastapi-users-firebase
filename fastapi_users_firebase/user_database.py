@@ -55,7 +55,7 @@ class FirebaseUserDatabase(BaseUserDatabase[FirebaseUser, UID]):
             return self._map_user(user)
 
     def _map_user(self, user: auth.UserRecord) -> FirebaseUser:
-        return FirebaseUser.from_record(user, self._is_superuser)
+        return FirebaseUser.from_record(user, self._app, self._is_superuser)
 
     async def get_by_email(self, email: str) -> Optional[FirebaseUser]:
         """Get an user by email.
