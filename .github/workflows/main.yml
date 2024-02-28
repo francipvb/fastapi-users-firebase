@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
       fail-fast: false
     steps:
       - name: Check out
@@ -72,4 +72,4 @@ jobs:
         uses: ./.github/actions/setup-poetry-env
 
       - name: Check if documentation can be built
-        run: poetry run mkdocs build -s
+        run: make site
