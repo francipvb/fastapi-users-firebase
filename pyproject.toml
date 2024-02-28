@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fastapi_users_firebase"
-version = "0.0.1"
+version = "0.0.0.post30.dev0+1bfc5f2"
 description = "This is a plugin for the FastAPI Users library to integrate Firebase Authentication to the app."
 authors = ["Francisco Del Roio <ffrancipvb@hotmail.com>"]
 repository = "https://github.com/francipvb/fastapi-users-firebase"
@@ -28,6 +28,8 @@ faker = "^23.2.1"
 trio = "^0.24.0"
 pyright = "^1.1.351"
 phone-gen = "^2.4.2"
+git-cliff = "^2.0.4"
+dunamai = "^1.19.2"
 
 [tool.poetry.group.docs.dependencies]
 mkdocs = "^1.4.2"

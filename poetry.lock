@@ -535,6 +535,20 @@ trio = ["trio (>=0.23)"]
 wmi = ["wmi (>=1.5.1)"]
 
 [[package]]
+name = "dunamai"
+version = "1.19.2"
+description = "Dynamic version generation"
+optional = false
+python-versions = ">=3.5"
+files = [
+    {file = "dunamai-1.19.2-py3-none-any.whl", hash = "sha256:bc126b17571a44d68ed826cec596e0f61dc01edca8b21486f70014936a5d44f2"},
+    {file = "dunamai-1.19.2.tar.gz", hash = "sha256:3be4049890763e19b8df1d52960dbea60b3e263eb0c96144a677ae0633734d2e"},
+]
+
+[package.dependencies]
+packaging = ">=20.9"
+
+[[package]]
 name = "email-validator"
 version = "2.1.0.post1"
 description = "A robust email address syntax and deliverability validation library."
@@ -673,6 +687,25 @@ python-dateutil = ">=2.8.1"
 
 [package.extras]
 dev = ["flake8", "markdown", "twine", "wheel"]
+
+[[package]]
+name = "git-cliff"
+version = "2.0.4"
+description = "A highly customizable changelog generator ⛰️"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "git_cliff-2.0.4-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:88b4f83768a420a8448af8be9cdbc6e7f2fc2f8f439b429ba646e97f1798c442"},
+    {file = "git_cliff-2.0.4-py3-none-macosx_11_0_arm64.whl", hash = "sha256:61e93f08862f69cc537c639989919277be3d9d322374c5aec85ccafede37c970"},
+    {file = "git_cliff-2.0.4-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:9a3d44c515de3c5984de4a2668e70859938eac0bf4261bf1238abeede6087cd0"},
+    {file = "git_cliff-2.0.4-py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4e9444d16776d205873b53372936f02475477f83ea68229a2d087930e4c19265"},
+    {file = "git_cliff-2.0.4-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:295e8b2ff09f82f570c8612a39b4ed52480958a24e5622684813f7c5695d6bce"},
+    {file = "git_cliff-2.0.4-py3-none-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:1e9c50dc3eef21a58261d4f54e544cff6bfa00f3d24d9ebdf08a3dc6bccf6009"},
+    {file = "git_cliff-2.0.4-py3-none-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:e513c825cc97cf95d40ae9db1b956088ab671480f6f545ca3176505cf84c9a12"},
+    {file = "git_cliff-2.0.4-py3-none-win32.whl", hash = "sha256:2af347bcd569db24ddf2f9e4d43be8e998efe5f985ddba3e3832b9baca5bba47"},
+    {file = "git_cliff-2.0.4-py3-none-win_amd64.whl", hash = "sha256:5053909a7e6ec391656405a2120805cbea8dcb9296df4987f626a7d3b1c264b7"},
+    {file = "git_cliff-2.0.4.tar.gz", hash = "sha256:b68da81ac17a19b5095e2abb1331b1e645167fdf9c3b01916f6fcfed7a99d47d"},
+]
 
 [[package]]
 name = "google-api-core"
@@ -2432,4 +2465,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8,<4.0"
-content-hash = "2a75a6f0326277617b54e1f8d46554861a6cc4cfaf182aa5f976644a377e487b"
+content-hash = "0feae19f1860c61093a3267e5701889e52e2f8c4c725e8da04d8a6bb8a4451b7"
