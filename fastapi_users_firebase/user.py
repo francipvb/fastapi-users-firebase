@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import Callable, NewType, Optional
 
+import firebase_admin
 from fastapi_users.models import UserProtocol
 from firebase_admin import auth
 from typing_extensions import Self
@@ -29,6 +30,7 @@ class FirebaseUser(UserProtocol[UID]):
     def from_record(
         cls,
         user: auth.UserRecord,
+        app: Optional[firebase_admin.App] = None,
         is_superuser_func: Optional[IsSuperuser] = None,
     ) -> Self:
         """Initialyze the user object.
