@@ -25,6 +25,7 @@ test: ## Test the code with pytest
 .version:
 	@poetry version $(shell poetry run dunamai from git --style pep440)
 	@poetry version -s > .version
+
 dist: .version ## Build wheel file using poetry
 	@echo "🚀 Creating wheel file"
 	@poetry build
@@ -32,18 +33,6 @@ dist: .version ## Build wheel file using poetry
 .PHONY: clean
 clean: ## clean build artifacts
 	@rm -rf dist
-
-.PHONY: publish
-publish: dist ## publish a release to pypi.
-	@echo "🚀 Publishing: Dry run."
-	@poetry config pypi-token.pypi $(PYPI_TOKEN)
-	@poetry publish --dry-run
-	@echo "🚀 Publishing."
-	@poetry publish
-
-.PHONY: build-and-publish
-build-and-publish: ## Build and publish.
-	@make clean publish
 
 site: CHANGELOG.md ## Test if documentation can be built without warnings or errors
 	@poetry run mkdocs build -s
